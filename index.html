@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Bartłomiej Krzymowski">
+    <meta name="email" content="krzymowski.b@gmail.com">
+    <meta name="description" content="Grison">
+    <title>Grison - comparison view</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="image-compare-viewer.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #header {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 1000;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #image-compare {
+            width: 100%;
+            /* height will be set dynamically by JavaScript */
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .button-container button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #2196F3;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        .button-container button:hover {
+            background-color: #0b79d0;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="button-container">
+            <button onclick="updateImages('screen1_copy.png', 'diff.png')">Screen1/Różnica</button>
+            <button onclick="updateImages('screen1_copy.png', 'screen2_copy.png')">Screen1/Screen2</button>
+            <button onclick="updateImages('diff.png', 'screen2_copy.png')">Różnica/Screen2</button>
+        </div>
+    </div>
+
+    <div id="image-compare">
+        <img id="img-before" src="screen1_copy.png" alt="Obraz 1">
+        <img id="img-after" src="diff.png" alt="Obraz 2">
+    </div>
+
+    <script src="image-compare-viewer.min.js"></script>
+    <script>
+        let viewer;
+        let lastPosition = 50; // Variable to store the last slider position
+
+        document.addEventListener("DOMContentLoaded", function () {
+            initializeViewer();
+        });
+
+        function initializeViewer() {
+            const element = document.getElementById("image-compare");
+
+            viewer = new ImageCompare(element, {
+                controlColor: "#2196F3",
+                controlShadow: true,
+                addCircle: true,
+                addCircleBlur: true,
+                showLabels: false, // Hide labels
+                smoothing: true,
+                smoothingAmount: 100,
+                hoverStart: false,
+                verticalMode: false,
+                startingPoint: lastPosition, // Start at the last known position
+                fluidMode: true
+            }).mount();
+
+            // Set the initial height of the container
+            updateContainerHeight();
+        }
+
+        function updateImages(beforeSrc, afterSrc) {
+            const imgBefore = document.getElementById("img-before");
+            const imgAfter = document.getElementById("img-after");
+
+            imgBefore.src = beforeSrc;
+            imgAfter.src = afterSrc;
+
+            // Wait for the images to load to get their natural heights
+            const imagePromises = [imgBefore, imgAfter].map(img => new Promise(resolve => {
+                img.onload = resolve;
+            }));
+
+            Promise.all(imagePromises).then(() => {
+                // Save the current slider position
+                saveSliderPosition();
+
+                // Destroy the existing viewer
+                if (viewer) {
+                    viewer.destroy(); // Destroy existing viewer
+                }
+
+                // Recreate the viewer instance
+                initializeViewer();
+
+                // Restore the slider position
+                restoreSliderPosition();
+            });
+        }
+
+        function updateContainerHeight() {
+            const element = document.getElementById("image-compare");
+            const images = element.getElementsByTagName("img");
+
+            const height = Math.max(images[0].naturalHeight, images[1].naturalHeight);
+            element.style.height = `${height}px`;
+        }
+
+        function saveSliderPosition() {
+            const slider = document.querySelector('.icv__slider');
+            if (slider) {
+                lastPosition = (slider.getBoundingClientRect().left / document.getElementById("image-compare").offsetWidth) * 100;
+            }
+        }
+
+        function restoreSliderPosition() {
+            setTimeout(() => {
+                const slider = document.querySelector('.icv__slider');
+                if (slider) {
+                    const containerWidth = document.getElementById("image-compare").offsetWidth;
+                    slider.style.left = `${(lastPosition / 100) * containerWidth}px`;
+                }
+            }, 100); // Adjust timeout if necessary
+        }
+    </script>
+</body>
+</html>
